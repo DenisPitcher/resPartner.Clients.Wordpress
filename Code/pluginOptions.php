@@ -122,9 +122,9 @@ class resQwest_Admin {
 		) );
 
         $cmb->add_field( array(
-            'name' => 'Enable resQwest Virtual Pages',
-            'desc' => 'enable support for virtual pages',
-            'id'   => 'resQwest_enableVirtualPages',
+            'name' => 'Enable resQwest Page Loading',
+            'desc' => 'enable support for loading pages from resQwest',
+            'id'   => 'resQwest_enablePageLoading',
             'type' => 'checkbox'
         ) );
 
