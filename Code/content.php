@@ -1,9 +1,5 @@
 <?php
 
-if ( file_exists( dirname( __FILE__ ) . '/seoRoutes.php' ) ) {
-	require_once dirname( __FILE__ ) . '/seoRoutes.php';
-}
-
 function api_div($content) {
 
     $original_content = $content ; // preserve the original ...
@@ -12,34 +8,28 @@ function api_div($content) {
         
         
         $enabled = get_post_meta( get_the_ID(), '_resQwest_enabled', true );
-        if ($enabled == "on" OR get_the_ID() == -1) {
+        if ($enabled == "on") {
             
             $route = get_post_meta( get_the_ID(), '_resQwest_route', true );
             $startroute = '';
             if ($route != "")
             {
                 $startroute = 'startRoute="' . $route . '"';
-            } else {
-                $entries = resQwest_get_option('resQwest_virtualPage');
-                $url = $_SERVER["REQUEST_URI"];
-                foreach ( (array) $entries as $key => $entry ) {
-                    $url = str_ireplace('/' . $entry . '/', '', $url);
-                }
-                $resQwestRoutes = initResQwestRoutes();
-        
-                if ( $resQwestRoutes !== false )
-                {
-                    foreach ( (array) $resQwestRoutes as $key => $value ) {
-                        if (stripos($url, $key) !== false)
-                        {
-                            $startroute = 'startRoute="' . $value . '"';
-                        }
-                    }
-                }
             }
-            
-            $add_pre_content = '<div id="resQwestEasyApi" ' . $startroute . ' "></div>';
 
+            $original_content = load_tag("[inventory-name]","inventory-name",$original_content);
+            $original_content = load_tag("[inventory-shortDescription]","inventory-shortDescription",$original_content);
+            $original_content = load_tag("[inventory-description]","inventory-description",$original_content);
+            $original_content = load_tag("[inventory-duration]","inventory-duration",$original_content);
+            $original_content = load_tag("[inventory-operates]","inventory-operates",$original_content);
+            $original_content = load_tag("[inventory-checkin]","inventory-checkin",$original_content);
+            $original_content = load_tag("[inventory-cost]","inventory-cost",$original_content);
+            $original_content = load_tag("[inventory-cancelPolicy]","inventory-cancelPolicy",$original_content);
+            $original_content = load_tag("[inventory-restrictions]","inventory-restrictions",$original_content);
+            $original_content = load_tag("[inventory-bookingNotes]","inventory-bookingNotes",$original_content);
+            $original_content = load_tag("[inventory-location]","inventory-location",$original_content);
+
+            $add_pre_content = '<div id="resQwestEasyApi" ' . $startroute . ' "></div>';
             if ($original_content != "") {
                 $pos = stripos($original_content, "[resQwestEasyApi]");
                 if ($pos === false) {
@@ -56,10 +46,26 @@ function api_div($content) {
     return $content;
 }
 
+function load_tag($tag, $metaId, $original_content) {
+    $metaValue = get_post_meta( get_the_ID(), $metaId, true );
+    
+    if ($metaValue == false || is_object($metaValue) == true)
+    {
+        return $original_content;
+    }
+
+    $pos = stripos($original_content, $tag);
+    if ($pos == false) {
+        return $original_content;
+    } else {
+        return str_ireplace($tag, $metaValue, $original_content);
+    }
+}
+
 function load_head_scripts() {
     if (!is_admin()) {
         $enabled = get_post_meta( get_the_ID(), '_resQwest_enabled', true );
-        if ($enabled == "on" OR get_the_ID() == -1) {
+        if ($enabled == "on") {
             wp_register_style( 'resQwestEasyApi-style', 'https://api.resqwest.com/web/app/main.css');
             wp_enqueue_style( 'resQwestEasyApi-style' );
         }
@@ -69,7 +75,7 @@ function load_head_scripts() {
 function load_footer_scripts() {
     if (!is_admin()) {
         $enabled = get_post_meta( get_the_ID(), '_resQwest_enabled', true );
-        if ($enabled == "on" OR get_the_ID() == -1) {
+        if ($enabled == "on") {
             //$domain = get_post_meta( get_the_ID(), '_resQwest_domain', true );
             wp_enqueue_script( 'resQwestEasyApi', 'https://api.resqwest.com/web/app/main-built.js');
         }

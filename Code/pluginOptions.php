@@ -141,36 +141,17 @@ class resQwest_Admin {
 			'type' => 'text',
 		) );
         
-        
-        
+        // $cmb->add_field( array(
+        //     'name' => 'Hide sidebar on reservation pages',
+        //     'desc' => 'use a custom page template that ignores the sidebar',
+        //     'id'   => 'resQwest_hideSidebar',
+        //     'type' => 'checkbox'
+		// ) );
+		
 		$cmb->add_field( array(
-			'name' => __( 'Virtual Directory Url:', 'resQwest' ),
-			'desc' => __( 'resQwest virtual directory', 'resQwest' ),
-			'id'   => 'resQwest_virtualPage',
-			'type' => 'text',
-			'default' => 'resQwest',
-            'repeatable' => true, // Repeatable fields are supported w/in repeatable groups (for most types)
-		) );
-        
-        $cmb->add_field( array(
-			'name' => __( 'Virtual page index refresh:', 'resQwest' ),
-			'desc' => __( 'How often should a check be made for new virtual pages (days)', 'resQwest' ),
-			'id'   => 'resQwest_virtualPageDays',
-			'type' => 'text',
-			'default' => '1',
-		) );
-        
-        $cmb->add_field( array(
-            'name' => 'Clear virtual page cache',
-            'desc' => 'triggering this will cause the virtual page cache to be cleared and reloaded from resQwest',
-            'id'   => 'resQwest_clearCache',
-            'type' => 'checkbox'
-        ) );
-
-        $cmb->add_field( array(
-            'name' => 'Hide sidebar on reservation pages',
-            'desc' => 'use a custom page template that ignores the sidebar',
-            'id'   => 'resQwest_hideSidebar',
+            'name' => 'Force an update of resQwest Pages',
+            'desc' => 'trigger pages to be reloaded from resQwest',
+            'id'   => 'resQwest_forceUpdate',
             'type' => 'checkbox'
         ) );
         

@@ -4,7 +4,8 @@ if ( file_exists( dirname( __FILE__ ) . '/httpful.phar' ) ) {
 	require_once dirname( __FILE__ ) . '/httpful.phar';
 }
 
-function loadSecurityToken() {
+function resQwest_loadSecurityToken() {
+        error_log('loading security token...');
         try {
             $accessToken = get_transient('resQwestAccessToken');
             if ($accessToken !== false)
@@ -30,7 +31,7 @@ function loadSecurityToken() {
                 ->send();
     
             $accessDetails = json_decode($response);
-            
+
             if (isset($accessDetails->access_token))
             {
                 $accessToken = $accessDetails->access_token;
