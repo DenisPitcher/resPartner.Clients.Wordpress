@@ -1,15 +1,6 @@
 <?php
 
-register_activation_hook(__FILE__, 'resQwest_loadInventory_activation');
 
-function resQwest_loadInventory_activation() {
-    if (! wp_next_scheduled ( 'resQwest_loadInventory_hook' )) {
-	wp_schedule_event(time(), 'daily', 'resQwest_loadInventory_hook');
-    }
-}
-
-///Hook into that action that'll fire every twenty four  hours
-add_action( 'resQwest_loadInventory_hook', 'resQwest_loadInventory' );
 
 add_action('cmb2_init', 'resQwest_forceUpdate');
 
@@ -17,8 +8,8 @@ function resQwest_forceUpdate() {
     $forceUpdate = resQwest_get_option('resQwest_forceUpdate');
     if ($forceUpdate === 'on')
     {
-        resQwest_loadInventory();
         resQwest_update_option('resQwest_forceUpdate', false);
+        resQwest_loadInventory();
     }
 }
 
@@ -29,7 +20,7 @@ function resQwest_loadInventory() {
         if ($enablePageLoading === 'on') {
             $accessToken = resQwest_loadSecurityToken();
             $body = "{}";
-            $configUri = "https://api-staging.resqwest.com/public/inventory";
+            $configUri = "https://api.resqwest.com/public/inventory";
             $response = \Httpful\Request::post($configUri)
                 ->sendsJson()
                 ->body($body)
@@ -96,7 +87,7 @@ function resQwest_loadInventorypage($inventory) {
         'meta_input' => array(
             '_resQwest_enabled' => "on",
             'resQwest-inventoryId' => $inventory->inventoryId,
-            '_resQwest_route' => 'inventory/'.$inventory->inventoryId
+            '_resQwest_route' => 'SelectTimes/'.$inventory->inventoryId
         )
     );  
 

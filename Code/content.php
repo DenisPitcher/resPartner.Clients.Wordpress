@@ -29,16 +29,16 @@ function api_div($content) {
             $original_content = load_tag("[inventory-bookingNotes]","inventory-bookingNotes",$original_content);
             $original_content = load_tag("[inventory-location]","inventory-location",$original_content);
 
-            $add_pre_content = '<div id="resQwestEasyApi" ' . $startroute . ' "></div>';
+            $add_post_content = '<div id="resQwestEasyApi" ' . $startroute . ' "></div>';
             if ($original_content != "") {
                 $pos = stripos($original_content, "[resQwestEasyApi]");
                 if ($pos === false) {
-                    $content = $add_pre_content  . $original_content ;
+                    $content = $original_content . $add_post_content;
                 } else {
-                    $content = str_ireplace("[resQwestEasyApi]", $add_pre_content, $original_content);
+                    $content = str_ireplace("[resQwestEasyApi]", $add_post_content, $original_content);
                 }
             } else {
-                $content = $add_pre_content  . $original_content ;
+                $content = $original_content . $add_post_content;
             }            
         }
     }
