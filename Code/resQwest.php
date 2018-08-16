@@ -7,6 +7,11 @@ Version: 1.0
 Author: resQwest.com
 Author URI: http://www.resQwest.com
 */
+
+require_once(ABSPATH . 'wp-config.php'); 
+require_once(ABSPATH . 'wp-includes/wp-db.php'); 
+require_once(ABSPATH . 'wp-admin/includes/taxonomy.php'); 
+
 if ( file_exists( dirname( __FILE__ ) . '/pageConfig.php' ) ) {
 	require_once dirname( __FILE__ ) . '/pageConfig.php';
 }

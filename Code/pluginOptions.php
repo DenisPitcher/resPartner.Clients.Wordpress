@@ -126,6 +126,13 @@ class resQwest_Admin {
             'desc' => 'enable support for loading pages from resQwest',
             'id'   => 'resQwest_enablePageLoading',
             'type' => 'checkbox'
+		) );
+		
+		$cmb->add_field( array(
+            'name' => 'Create categories according to resQwest',
+            'desc' => 'create categories and assign them to the associated pages',
+            'id'   => 'resQwest_enableCategoryLoading',
+            'type' => 'checkbox'
         ) );
 
 		$cmb->add_field( array(

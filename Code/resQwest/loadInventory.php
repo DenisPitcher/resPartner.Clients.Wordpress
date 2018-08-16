@@ -4,6 +4,7 @@
 
 add_action('cmb2_init', 'resQwest_forceUpdate');
 
+
 function resQwest_forceUpdate() {
     $forceUpdate = resQwest_get_option('resQwest_forceUpdate');
     if ($forceUpdate === 'on')
@@ -37,6 +38,9 @@ function resQwest_loadInventory() {
                 {
                     resQwest_loadInventoryPage($inventory);
                 }
+
+                resQwest_markRemovedPagesAsDraft($inventoryDetails);
+
                 return true;
             }
             else {
@@ -56,7 +60,31 @@ function resQwest_loadInventory() {
 }
 
 
-//add_action('cmb2_init', 'resQwestPageLoader');
+function resQwest_markRemovedPagesAsDraft($inventoryDetails)
+{
+    $inventoryPages = resQwest_get_post_ids_by_meta_key('resQwest-inventoryId');
+    foreach($inventoryPages as $key => $pageMeta)
+    {
+        $invId = $pageMeta->meta_value;
+        $exists = false;
+        foreach($inventoryDetails as $key => $inventory)
+        {
+            if ($inventory->inventoryId == $invId)
+            {
+                $exists = true;
+            }
+        }
+        if ($exists == false)
+        {
+            $post = array(
+                'ID' => $pageMeta->post_id,
+                'post_status' => 'draft'
+            );
+            wp_update_post( $post );
+        }
+    }
+}
+
 
 function resQwest_loadInventorypage($inventory) {
 
@@ -89,18 +117,29 @@ function resQwest_loadInventorypage($inventory) {
             'resQwest-inventoryId' => $inventory->inventoryId,
             '_resQwest_route' => 'SelectTimes/'.$inventory->inventoryId
         )
-    );  
+    );
+
+    $enableCategoryLoading = resQwest_get_option('resQwest_enableCategoryLoading');
+    if ($enableCategoryLoading === 'on') {
+        if (sizeof($inventory->categories) > 0)
+        {
+            $firstCategory = array_pop(array_reverse($inventory->categories));
+            $categoryPageId = resQwest_loadCategoryPage($firstCategory);
+            $post['post_parent'] = $categoryPageId;
+        }
+    }
 
     // check for existing post
     $id = resQwest_get_post_id_by_meta_key_and_value('resQwest-inventoryId',$inventory->inventoryId);
 
     if ($id) {
-        $post['ID'] = $existing->ID;
+        $post['ID'] = $id;
         wp_update_post( $post );
         
     }
     else
     {
+        $post['post_content'] = '[inventory-shortDescription]';
         $post['post_status'] = 'draft';
         $post['post_type'] = 'page';
         $id = wp_insert_post( $post );  
@@ -118,6 +157,35 @@ function resQwest_loadInventorypage($inventory) {
     update_post_meta($id, 'inventory-location', $inventory->location);
 }
 
+function resQwest_loadCategoryPage($category) {
+    $slug = str_replace(' ','-',$category->name);
+
+    $post = array(
+        'post_name' => $slug, // The name (slug) for your post
+        'post_title' => $category->name, //The title of your post.
+        'meta_input' => array(
+            '_resQwest_enabled' => "on",
+            'resQwest-categoryId' => $category->id,
+            '_resQwest_route' => 'Category/'.$category->id
+        )
+    );
+
+    // check for existing post
+    $id = resQwest_get_post_id_by_meta_key_and_value('resQwest-categoryId',$category->id);
+
+    if ($id) {
+        $post['ID'] = $id;
+        wp_update_post( $post );
+    }
+    else
+    {
+        $post['post_status'] = 'draft';
+        $post['post_type'] = 'page';
+        $id = wp_insert_post( $post );  
+    }
+    return $id;
+}
+
 function resQwest_get_post_id_by_meta_key_and_value( $meta_key, $meta_value ){
 	global $wpdb;
  
@@ -129,6 +197,14 @@ function resQwest_get_post_id_by_meta_key_and_value( $meta_key, $meta_value ){
     //     return $ids; // return array
 	// else
 	// 	return $ids[0]; // return int
+}
+
+function resQwest_get_post_ids_by_meta_key( $meta_key ){
+	global $wpdb;
+ 
+	$ids = $wpdb->get_results( $wpdb->prepare( "SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = %s", $meta_key ) );
+
+    return $ids; 
 }
 
 ?>
