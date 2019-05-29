@@ -126,6 +126,7 @@ function resQwest_loadInventorypage($inventory) {
             $firstCategory = array_pop(array_reverse($inventory->categories));
             $categoryPageId = resQwest_loadCategoryPage($firstCategory);
             $post['post_parent'] = $categoryPageId;
+            $post['post_category'] = $inventory->categories;
         }
     }
 

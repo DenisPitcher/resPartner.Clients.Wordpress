@@ -3,7 +3,7 @@
 Plugin Name: resQwest
 Plugin URI: http://www.resqwest.com
 Description: resQwest
-Version: 1.0
+Version: 1.1
 Author: resQwest.com
 Author URI: http://www.resQwest.com
 */
