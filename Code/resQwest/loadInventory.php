@@ -110,7 +110,7 @@ function resQwest_loadInventorypage($inventory) {
         //'post_status' => 'publish', //[ 'draft' | 'publish' | 'pending' ] //Set the status of the new post.
         'post_title' => $inventory->name, //The title of your post.
         //'post_type' => 'page', //[ 'post' | 'page' ] //Sometimes you want to post a page.
-        //'tags_input' => [ '<tag>, <tag>, <...>' ] //For tags.
+        'tags_input' => $inventory->categories,
         //'to_ping' => [ ? ] //?
         'meta_input' => array(
             '_resQwest_enabled' => "on",
@@ -126,7 +126,6 @@ function resQwest_loadInventorypage($inventory) {
             $firstCategory = array_pop(array_reverse($inventory->categories));
             $categoryPageId = resQwest_loadCategoryPage($firstCategory);
             $post['post_parent'] = $categoryPageId;
-            $post['post_category'] = $inventory->categories;
         }
     }
 
