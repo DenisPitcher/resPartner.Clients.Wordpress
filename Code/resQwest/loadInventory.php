@@ -17,8 +17,8 @@ function resQwest_forceUpdate() {
 
 function resQwest_loadInventory() {
      try {
-        $enablePageLoading = resQwest_get_option('resQwest_enablePageLoading');
-        if ($enablePageLoading === 'on') {
+        //$enablePageLoading = resQwest_get_option('resQwest_enablePageLoading');
+        //if ($enablePageLoading === 'on') {
             $accessToken = resQwest_loadSecurityToken();
             $body = "{}";
             $configUri = "https://api.resqwest.com/public/inventory";
@@ -46,9 +46,7 @@ function resQwest_loadInventory() {
             else {
                 return false;
             }
-
-            
-        }
+        //}
      }
      catch(Exception $e)
      {
@@ -135,14 +133,16 @@ function resQwest_loadInventorypage($inventory) {
     if ($id) {
         $post['ID'] = $id;
         wp_update_post( $post );
-        
     }
     else
     {
-        $post['post_content'] = '[inventory-shortDescription]';
-        $post['post_status'] = 'draft';
-        $post['post_type'] = 'page';
-        $id = wp_insert_post( $post );  
+        $enablePageLoading = resQwest_get_option('resQwest_enablePageLoading');
+        if ($enablePageLoading === 'on') {
+            $post['post_content'] = '[inventory-shortDescription]';
+            $post['post_status'] = 'draft';
+            $post['post_type'] = 'page';
+            $id = wp_insert_post( $post );  
+        }
     }
     update_post_meta($id, 'inventory-name', $inventory->name);
     update_post_meta($id, 'inventory-shortDescription', $inventory->shortDescription);

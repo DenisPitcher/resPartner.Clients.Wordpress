@@ -123,7 +123,7 @@ class resQwest_Admin {
 
         $cmb->add_field( array(
             'name' => 'Enable resQwest Page Loading',
-            'desc' => 'enable support for loading pages from resQwest',
+            'desc' => 'enable support for pages to be created matching resQwest config',
             'id'   => 'resQwest_enablePageLoading',
             'type' => 'checkbox'
 		) );
@@ -157,7 +157,7 @@ class resQwest_Admin {
 		
 		$cmb->add_field( array(
             'name' => 'Force an update of resQwest Pages',
-            'desc' => 'trigger pages to be reloaded from resQwest',
+            'desc' => 'trigger pages and their metadata to be reloaded from resQwest',
             'id'   => 'resQwest_forceUpdate',
             'type' => 'checkbox'
         ) );
