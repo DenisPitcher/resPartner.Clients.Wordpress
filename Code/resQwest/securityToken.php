@@ -14,7 +14,7 @@ function resQwest_loadSecurityToken() {
                 return $accessToken;
             }
 
-            $uri = "https://api.resqwest.com/security/accounts/login";
+            $uri = "https://security.resqwest.com/accounts/login";
             $apiId = resQwest_get_option('resQwest_apiId');
             $apiKey = resQwest_get_option('resQwest_apiKey');
     

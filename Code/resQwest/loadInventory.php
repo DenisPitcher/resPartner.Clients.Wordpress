@@ -21,7 +21,7 @@ function resQwest_loadInventory() {
         //if ($enablePageLoading === 'on') {
             $accessToken = resQwest_loadSecurityToken();
             $body = "{}";
-            $configUri = "https://api.resqwest.com/public/inventory";
+            $configUri = "https://public.resqwest.com/inventory";
             $response = \Httpful\Request::post($configUri)
                 ->sendsJson()
                 ->body($body)
