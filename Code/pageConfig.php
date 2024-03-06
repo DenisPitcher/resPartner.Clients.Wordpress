@@ -84,6 +84,13 @@ function resQwest_register_metabox() {
 		// 'repeatable' => true,
 	) );
 
+	$cmb_demo->add_field( array(
+		'name' => 'Description',
+		'desc' => 'The inventory description loaded from resQwest',
+		'id' => 'inventory-description',
+		'type' => 'textarea'
+	) );
+
 	//$cmb_demo->add_field( array(
 	//	'name' => __( 'Your resQwest domain', 'cmb2' ),
 	//	'desc' => __( 'eg. dolphins.resqwest.com', 'cmb2' ),
