@@ -77,8 +77,6 @@ class pageTemplate {
 		$this->templates = array();
 		$this->plugin_locale = 'resQwest';
 
-		// Grab the translations for the plugin
-		add_action( 'init', array( $this, 'load_plugin_textdomain' ) );
 
 		// Add a filter to the page attributes metabox to inject our template into the page template cache.
 		add_filter('page_attributes_dropdown_pages_args', array( $this, 'register_project_templates' ) );
@@ -104,21 +102,6 @@ class pageTemplate {
 		$templates = array_merge( $templates, $this->templates );
 
 	} // end constructor
-
-    /**
-     * Load the plugin text domain for translation.
-     *
-     * @since    1.0.0
-     */
-    public function load_plugin_textdomain() {
-
-	    $domain = $this->plugin_slug;
-	    $locale = apply_filters( 'plugin_locale', get_locale(), $domain );
-
-	    load_textdomain( $domain, trailingslashit( WP_LANG_DIR ) . $domain . '/' . $domain . '-' . $locale . '.mo' );
-	    load_plugin_textdomain( $domain, FALSE, basename( dirname( __FILE__ ) ) . '/languages/' );
-
-    } // end load_plugin_textdomain
 
 	/**
 	 * Adds our template to the pages cache in order to trick WordPress
