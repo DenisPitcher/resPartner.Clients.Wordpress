@@ -3,12 +3,23 @@
 // Note: resQwest_forceUpdate() hook removed - now using AJAX refresh button in pluginOptions.php
 
 function resQwest_loadInventory() {
+     $startTime = microtime(true);
+     $updateStatus = 'error';
+     $errorMessage = '';
+     $responseCode = 0;
+     $pagesProcessed = 0;
+     $pagesUpdated = 0;
+     $pagesCreated = 0;
+     $pagesErrored = 0;
+     
      try {
         //$enablePageLoading = resQwest_get_option('resQwest_enablePageLoading');
         //if ($enablePageLoading === 'on') {
             $accessToken = resQwest_loadSecurityToken();
             if (!$accessToken) {
-                error_log('resQwest_loadInventory: Failed to load security token');
+                $errorMessage = 'Failed to load security token';
+                error_log('resQwest_loadInventory: ' . $errorMessage);
+                resQwest_save_global_refresh_metadata($updateStatus, $errorMessage, 0, 0, 0, 0, 0, $startTime);
                 return false;
             }
 
@@ -32,21 +43,39 @@ function resQwest_loadInventory() {
                 {
                     $inventoryDetails = $inventoryResponse->inventoryDetails;
                     $resQwestRoutes = array(); 
+                    
+                    // Track pages before processing
+                    $pagesBefore = count(resQwest_get_post_ids_by_meta_key('resQwest-inventoryId'));
+                    
                     foreach($inventoryDetails as $key => $inventory)
                     {
-                        resQwest_loadInventoryPage($inventory, $responseCode);
+                        $pagesProcessed++;
+                        $pageResult = resQwest_loadInventoryPage($inventory, $responseCode);
+                        if ($pageResult === 'created') {
+                            $pagesCreated++;
+                        } elseif ($pageResult === 'updated') {
+                            $pagesUpdated++;
+                        } elseif ($pageResult === false) {
+                            $pagesErrored++;
+                        }
                     }
 
                     resQwest_markRemovedPagesAsDraft($inventoryDetails);
-
+                    
+                    $updateStatus = 'success';
+                    resQwest_save_global_refresh_metadata($updateStatus, '', $responseCode, $pagesProcessed, $pagesUpdated, $pagesCreated, $pagesErrored, $startTime);
                     return true;
                 }
                 else {
-                    error_log('resQwest_loadInventory: API response missing inventoryDetails. Response code: ' . $responseCode);
+                    $errorMessage = 'API response missing inventoryDetails. Response code: ' . $responseCode;
+                    error_log('resQwest_loadInventory: ' . $errorMessage);
+                    resQwest_save_global_refresh_metadata($updateStatus, $errorMessage, $responseCode, 0, 0, 0, 0, $startTime);
                     return false;
                 }
             } else {
-                error_log('resQwest_loadInventory: API request failed with response code: ' . $responseCode);
+                $errorMessage = 'API request failed with response code: ' . $responseCode;
+                error_log('resQwest_loadInventory: ' . $errorMessage);
+                resQwest_save_global_refresh_metadata($updateStatus, $errorMessage, $responseCode, 0, 0, 0, 0, $startTime);
                 return false;
             }
         //}
@@ -55,10 +84,30 @@ function resQwest_loadInventory() {
      {
          // ignore exceptions as it crashed the page load if there is a connectivity issue
          // clear any transient data to force a retry
-         error_log('resQwestRoutes loading exception: ' . $e->getMessage());
+         $errorMessage = 'Exception: ' . $e->getMessage();
+         error_log('resQwestRoutes loading exception: ' . $errorMessage);
+         resQwest_save_global_refresh_metadata($updateStatus, $errorMessage, $responseCode, $pagesProcessed, $pagesUpdated, $pagesCreated, $pagesErrored, $startTime);
          return false;
      }
 
+}
+
+/**
+ * Save global refresh metadata to options
+ */
+function resQwest_save_global_refresh_metadata($status, $error, $responseCode, $pagesProcessed, $pagesUpdated, $pagesCreated, $pagesErrored, $startTime) {
+    $endTime = microtime(true);
+    $duration = round($endTime - $startTime, 2);
+    
+    resQwest_update_option('resQwest_globalRefresh_lastUpdate', current_time('mysql'));
+    resQwest_update_option('resQwest_globalRefresh_lastUpdateStatus', $status);
+    resQwest_update_option('resQwest_globalRefresh_lastError', $error);
+    resQwest_update_option('resQwest_globalRefresh_apiResponseCode', $responseCode);
+    resQwest_update_option('resQwest_globalRefresh_duration', $duration);
+    resQwest_update_option('resQwest_globalRefresh_pagesProcessed', $pagesProcessed);
+    resQwest_update_option('resQwest_globalRefresh_pagesUpdated', $pagesUpdated);
+    resQwest_update_option('resQwest_globalRefresh_pagesCreated', $pagesCreated);
+    resQwest_update_option('resQwest_globalRefresh_pagesErrored', $pagesErrored);
 }
 
 
@@ -142,6 +191,7 @@ function resQwest_loadInventorypage($inventory, $responseCode = '') {
 
         // check for existing post
         $id = resQwest_get_post_id_by_meta_key_and_value('resQwest-inventoryId',$inventory->inventoryId);
+        $wasCreated = false;
 
         if ($id) {
             $post['ID'] = $id;
@@ -154,7 +204,8 @@ function resQwest_loadInventorypage($inventory, $responseCode = '') {
                 $post['post_content'] = '[inventory-shortDescription]';
                 $post['post_status'] = 'draft';
                 $post['post_type'] = 'page';
-                $id = wp_insert_post( $post );  
+                $id = wp_insert_post( $post );
+                $wasCreated = true;
             }
         }
 
@@ -204,7 +255,14 @@ function resQwest_loadInventorypage($inventory, $responseCode = '') {
             // Clear error on success
             delete_post_meta($id, '_resQwest_lastError');
         }
+        
+        // Return status for tracking
+        if ($id && !$errorMessage) {
+            return $wasCreated ? 'created' : 'updated';
+        }
     }
+    
+    return false; // Return false on error
 }
 
 function resQwest_loadCategoryPage($category) {

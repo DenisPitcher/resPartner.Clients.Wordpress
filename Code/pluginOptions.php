@@ -102,24 +102,70 @@ class resQwest_Admin {
 						},
 						success: function(response) {
 							if (response.success) {
-								var message = response.data.message || "Refresh completed";
-								var pagesUpdated = response.data.pages_updated || 0;
-								var errors = response.data.errors || [];
+								var data = response.data || {};
+								var message = data.message || "Refresh completed";
+								var pagesProcessed = data.pages_processed || 0;
+								var pagesUpdated = data.pages_updated || 0;
+								var pagesCreated = data.pages_created || 0;
+								var pagesErrored = data.pages_errored || 0;
+								var duration = data.duration || 0;
+								var responseCode = data.response_code || 'N/A';
+								var errors = data.errors || [];
 								
 								$status.html("<span style=\"color: #46b450;\">✓ " + message + "</span>");
-								var progressHtml = "<p><strong>Pages updated: " + pagesUpdated + "</strong></p>";
+								var progressHtml = "<div style=\"background: #f0f0f0; padding: 10px; border-radius: 4px; margin-top: 10px;\">";
+								progressHtml += "<p><strong>Summary:</strong></p>";
+								progressHtml += "<ul style=\"margin: 5px 0;\">";
+								progressHtml += "<li>Pages Processed: <strong>" + pagesProcessed + "</strong></li>";
+								progressHtml += "<li>Pages Updated: <strong>" + pagesUpdated + "</strong></li>";
+								progressHtml += "<li>Pages Created: <strong>" + pagesCreated + "</strong></li>";
+								if (pagesErrored > 0) {
+									progressHtml += "<li style=\"color: #dc3232;\">Pages Errored: <strong>" + pagesErrored + "</strong></li>";
+								}
+								progressHtml += "<li>Duration: <strong>" + duration + " seconds</strong></li>";
+								progressHtml += "<li>API Response Code: <strong>" + responseCode + "</strong></li>";
+								progressHtml += "</ul>";
 								if (errors.length > 0) {
-									progressHtml += "<p style=\"color: #dc3232;\"><strong>Errors:</strong></p><ul>";
+									progressHtml += "<p style=\"color: #dc3232; margin-top: 10px;\"><strong>Errors:</strong></p><ul style=\"color: #dc3232;\">";
 									errors.forEach(function(error) {
 										progressHtml += "<li>" + error + "</li>";
 									});
 									progressHtml += "</ul>";
 								}
+								progressHtml += "<p style=\"margin-top: 10px; font-size: 11px; color: #666;\">Page will refresh in 3 seconds to show updated debug information...</p>";
+								progressHtml += "</div>";
 								$progress.html(progressHtml);
 								$btn.prop("disabled", false);
+								
+								// Reload page after 3 seconds to show updated debug fields
+								setTimeout(function() {
+									location.reload();
+								}, 3000);
 							} else {
-								$status.html("<span style=\"color: #dc3232;\">✗ " + (response.data.message || "Error refreshing") + "</span>");
-								$progress.html("<p style=\"color: #dc3232;\">" + (response.data.message || "An error occurred") + "</p>");
+								var data = response.data || {};
+								var message = data.message || "Error refreshing";
+								var errors = data.errors || [];
+								var responseCode = data.response_code || 'N/A';
+								var duration = data.duration || 0;
+								
+								$status.html("<span style=\"color: #dc3232;\">✗ " + message + "</span>");
+								var progressHtml = "<div style=\"background: #fff3cd; padding: 10px; border-radius: 4px; margin-top: 10px; border-left: 4px solid #dc3232;\">";
+								progressHtml += "<p style=\"color: #dc3232; margin: 0 0 10px 0;\"><strong>" + message + "</strong></p>";
+								if (responseCode !== 'N/A') {
+									progressHtml += "<p>API Response Code: <strong>" + responseCode + "</strong></p>";
+								}
+								if (duration > 0) {
+									progressHtml += "<p>Duration: <strong>" + duration + " seconds</strong></p>";
+								}
+								if (errors.length > 0) {
+									progressHtml += "<p style=\"margin-top: 10px;\"><strong>Errors:</strong></p><ul>";
+									errors.forEach(function(error) {
+										progressHtml += "<li>" + error + "</li>";
+									});
+									progressHtml += "</ul>";
+								}
+								progressHtml += "</div>";
+								$progress.html(progressHtml);
 								$btn.prop("disabled", false);
 							}
 						},
@@ -333,6 +379,212 @@ define('WP_DEBUG_DISPLAY', false);</pre>
 				return '<button type="button" id="resqwest-refresh-all-btn" class="button button-primary" data-nonce="' . esc_attr($nonce) . '">Refresh All Inventory</button><span id="resqwest-refresh-all-status" style="margin-left: 10px;"></span><div id="resqwest-refresh-all-progress" style="margin-top: 10px;"></div>';
 			},
 		) );
+
+		// Debug Information Section for Global Refresh
+		$cmb->add_field( array(
+			'name' => __( 'Global Refresh Debug Information', 'resQwest' ),
+			'desc' => __( 'Information about the last sitewide inventory refresh', 'resQwest' ),
+			'id'   => 'resQwest_globalRefresh_debug_title',
+			'type' => 'title',
+		) );
+
+		// Last Update Timestamp
+		$cmb->add_field( array(
+			'name' => __( 'Last Refresh', 'resQwest' ),
+			'desc' => __( 'When the sitewide inventory was last refreshed', 'resQwest' ),
+			'id'   => 'resQwest_globalRefresh_lastUpdate',
+			'type' => 'text',
+			'attributes' => array(
+				'readonly' => 'readonly',
+			),
+			'default_cb' => function($field_args, $field) {
+				try {
+					$value = resQwest_get_option('resQwest_globalRefresh_lastUpdate');
+					if ($value && is_string($value)) {
+						$timestamp = strtotime($value);
+						if ($timestamp !== false && $timestamp > 0) {
+							$date_format = get_option('date_format');
+							$time_format = get_option('time_format');
+							if ($date_format && $time_format) {
+								return date_i18n($date_format . ' ' . $time_format, $timestamp);
+							} else {
+								return date_i18n('Y-m-d H:i:s', $timestamp);
+							}
+						}
+					}
+				} catch (Exception $e) {
+					error_log('resQwest globalRefresh lastUpdate default_cb error: ' . $e->getMessage());
+				}
+				return 'Never refreshed';
+			},
+		) );
+
+		// Update Status
+		$cmb->add_field( array(
+			'name' => __( 'Refresh Status', 'resQwest' ),
+			'desc' => __( 'Status of the last sitewide refresh attempt', 'resQwest' ),
+			'id'   => 'resQwest_globalRefresh_lastUpdateStatus',
+			'type' => 'select',
+			'options' => array(
+				'success' => 'Success',
+				'error' => 'Error',
+				'' => 'Never refreshed',
+			),
+			'attributes' => array(
+				'readonly' => 'readonly',
+				'disabled' => 'disabled',
+			),
+			'default_cb' => function($field_args, $field) {
+				try {
+					$status = resQwest_get_option('resQwest_globalRefresh_lastUpdateStatus');
+					return $status ? $status : '';
+				} catch (Exception $e) {
+					error_log('resQwest globalRefresh lastUpdateStatus default_cb error: ' . $e->getMessage());
+				}
+				return '';
+			},
+		) );
+
+		// API Response Code
+		$cmb->add_field( array(
+			'name' => __( 'API Response Code', 'resQwest' ),
+			'desc' => __( 'HTTP response code from the last API call', 'resQwest' ),
+			'id'   => 'resQwest_globalRefresh_apiResponseCode',
+			'type' => 'text_small',
+			'attributes' => array(
+				'readonly' => 'readonly',
+			),
+			'default_cb' => function($field_args, $field) {
+				try {
+					$code = resQwest_get_option('resQwest_globalRefresh_apiResponseCode');
+					return $code ? $code : 'N/A';
+				} catch (Exception $e) {
+					error_log('resQwest globalRefresh apiResponseCode default_cb error: ' . $e->getMessage());
+				}
+				return 'N/A';
+			},
+		) );
+
+		// Duration
+		$cmb->add_field( array(
+			'name' => __( 'Duration', 'resQwest' ),
+			'desc' => __( 'Time taken to complete the refresh (seconds)', 'resQwest' ),
+			'id'   => 'resQwest_globalRefresh_duration',
+			'type' => 'text_small',
+			'attributes' => array(
+				'readonly' => 'readonly',
+			),
+			'default_cb' => function($field_args, $field) {
+				try {
+					$duration = resQwest_get_option('resQwest_globalRefresh_duration');
+					return $duration ? $duration . ' seconds' : 'N/A';
+				} catch (Exception $e) {
+					error_log('resQwest globalRefresh duration default_cb error: ' . $e->getMessage());
+				}
+				return 'N/A';
+			},
+		) );
+
+		// Pages Processed
+		$cmb->add_field( array(
+			'name' => __( 'Pages Processed', 'resQwest' ),
+			'desc' => __( 'Total number of inventory items processed', 'resQwest' ),
+			'id'   => 'resQwest_globalRefresh_pagesProcessed',
+			'type' => 'text_small',
+			'attributes' => array(
+				'readonly' => 'readonly',
+			),
+			'default_cb' => function($field_args, $field) {
+				try {
+					$count = resQwest_get_option('resQwest_globalRefresh_pagesProcessed');
+					return $count ? $count : '0';
+				} catch (Exception $e) {
+					error_log('resQwest globalRefresh pagesProcessed default_cb error: ' . $e->getMessage());
+				}
+				return '0';
+			},
+		) );
+
+		// Pages Updated
+		$cmb->add_field( array(
+			'name' => __( 'Pages Updated', 'resQwest' ),
+			'desc' => __( 'Number of existing pages that were updated', 'resQwest' ),
+			'id'   => 'resQwest_globalRefresh_pagesUpdated',
+			'type' => 'text_small',
+			'attributes' => array(
+				'readonly' => 'readonly',
+			),
+			'default_cb' => function($field_args, $field) {
+				try {
+					$count = resQwest_get_option('resQwest_globalRefresh_pagesUpdated');
+					return $count ? $count : '0';
+				} catch (Exception $e) {
+					error_log('resQwest globalRefresh pagesUpdated default_cb error: ' . $e->getMessage());
+				}
+				return '0';
+			},
+		) );
+
+		// Pages Created
+		$cmb->add_field( array(
+			'name' => __( 'Pages Created', 'resQwest' ),
+			'desc' => __( 'Number of new pages that were created', 'resQwest' ),
+			'id'   => 'resQwest_globalRefresh_pagesCreated',
+			'type' => 'text_small',
+			'attributes' => array(
+				'readonly' => 'readonly',
+			),
+			'default_cb' => function($field_args, $field) {
+				try {
+					$count = resQwest_get_option('resQwest_globalRefresh_pagesCreated');
+					return $count ? $count : '0';
+				} catch (Exception $e) {
+					error_log('resQwest globalRefresh pagesCreated default_cb error: ' . $e->getMessage());
+				}
+				return '0';
+			},
+		) );
+
+		// Pages Errored
+		$cmb->add_field( array(
+			'name' => __( 'Pages Errored', 'resQwest' ),
+			'desc' => __( 'Number of pages that failed to process', 'resQwest' ),
+			'id'   => 'resQwest_globalRefresh_pagesErrored',
+			'type' => 'text_small',
+			'attributes' => array(
+				'readonly' => 'readonly',
+			),
+			'default_cb' => function($field_args, $field) {
+				try {
+					$count = resQwest_get_option('resQwest_globalRefresh_pagesErrored');
+					return $count ? $count : '0';
+				} catch (Exception $e) {
+					error_log('resQwest globalRefresh pagesErrored default_cb error: ' . $e->getMessage());
+				}
+				return '0';
+			},
+		) );
+
+		// Last Error Message
+		$cmb->add_field( array(
+			'name' => __( 'Last Error', 'resQwest' ),
+			'desc' => __( 'Error message from the last failed refresh attempt', 'resQwest' ),
+			'id'   => 'resQwest_globalRefresh_lastError',
+			'type' => 'textarea',
+			'attributes' => array(
+				'readonly' => 'readonly',
+				'rows' => 3,
+			),
+			'default_cb' => function($field_args, $field) {
+				try {
+					$error = resQwest_get_option('resQwest_globalRefresh_lastError');
+					return $error ? $error : 'No errors';
+				} catch (Exception $e) {
+					error_log('resQwest globalRefresh lastError default_cb error: ' . $e->getMessage());
+				}
+				return 'No errors';
+			},
+		) );
         
 	}
 
@@ -412,21 +664,42 @@ function resQwest_ajax_refresh_all() {
 	// Refresh all inventory
 	$result = resQwest_loadInventory();
 	
+	// Get debug information from options
+	$lastUpdate = resQwest_get_option('resQwest_globalRefresh_lastUpdate');
+	$lastStatus = resQwest_get_option('resQwest_globalRefresh_lastUpdateStatus');
+	$lastError = resQwest_get_option('resQwest_globalRefresh_lastError');
+	$responseCode = resQwest_get_option('resQwest_globalRefresh_apiResponseCode');
+	$duration = resQwest_get_option('resQwest_globalRefresh_duration');
+	$pagesProcessed = resQwest_get_option('resQwest_globalRefresh_pagesProcessed');
+	$pagesUpdated = resQwest_get_option('resQwest_globalRefresh_pagesUpdated');
+	$pagesCreated = resQwest_get_option('resQwest_globalRefresh_pagesCreated');
+	$pagesErrored = resQwest_get_option('resQwest_globalRefresh_pagesErrored');
+	
 	if ($result === true) {
-		// Count updated pages
-		$inventoryPages = resQwest_get_post_ids_by_meta_key('resQwest-inventoryId');
-		$pagesUpdated = count($inventoryPages);
-		
 		wp_send_json_success(array(
 			'message' => 'All inventory refreshed successfully',
+			'last_update' => $lastUpdate,
+			'status' => $lastStatus,
+			'response_code' => $responseCode,
+			'duration' => $duration,
+			'pages_processed' => $pagesProcessed,
 			'pages_updated' => $pagesUpdated,
-			'errors' => array()
+			'pages_created' => $pagesCreated,
+			'pages_errored' => $pagesErrored,
+			'errors' => $lastError ? array($lastError) : array()
 		));
 	} else {
 		wp_send_json_error(array(
 			'message' => 'Failed to refresh inventory',
-			'pages_updated' => 0,
-			'errors' => array('Unable to load inventory from API')
+			'last_update' => $lastUpdate,
+			'status' => $lastStatus,
+			'response_code' => $responseCode,
+			'duration' => $duration,
+			'pages_processed' => $pagesProcessed,
+			'pages_updated' => $pagesUpdated,
+			'pages_created' => $pagesCreated,
+			'pages_errored' => $pagesErrored,
+			'errors' => $lastError ? array($lastError) : array('Unable to load inventory from API')
 		));
 	}
 }

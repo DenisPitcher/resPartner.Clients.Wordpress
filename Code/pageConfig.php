@@ -262,6 +262,45 @@ function resQwest_register_metabox() {
 		'type' => 'checkbox',
 	) );
 
+	// Refresh Button - moved to top for easier access
+	$cmb_demo->add_field( array(
+		'name' => __( 'Actions', 'cmb2' ),
+		'desc' => __( 'Refresh inventory data from API', 'cmb2' ),
+		'id'   => $prefix . 'refresh_button',
+		'type' => 'title',
+		'render_row_cb' => function($field_args, $field) {
+			try {
+				$post_id = isset($field->object_id) ? $field->object_id : (isset($_GET['post']) ? intval($_GET['post']) : 0);
+				if (!$post_id && function_exists('get_the_ID')) {
+					$post_id = get_the_ID();
+				}
+				if (!$post_id) {
+					global $post;
+					$post_id = isset($post->ID) ? $post->ID : 0;
+				}
+				if ($post_id) {
+					$nonce = wp_create_nonce('resqwest_refresh_' . $post_id);
+					?>
+					<div class="cmb-row cmb-type-title">
+						<div class="cmb-th">
+							<label><?php echo esc_html($field_args['name']); ?></label>
+						</div>
+						<div class="cmb-td">
+							<p class="cmb2-metabox-description"><?php echo esc_html($field_args['desc']); ?></p>
+							<button type="button" id="resqwest-refresh-btn" class="button button-secondary" data-post-id="<?php echo esc_attr($post_id); ?>" data-nonce="<?php echo esc_attr($nonce); ?>">Refresh Inventory Data</button>
+							<span id="resqwest-refresh-status" style="margin-left: 10px;"></span>
+						</div>
+					</div>
+					<?php
+				}
+			} catch (Exception $e) {
+				error_log('resQwest refresh_button render_row_cb error: ' . $e->getMessage());
+				// Output a simple fallback
+				echo '<div class="cmb-row cmb-type-title"><div class="cmb-th"><label>' . esc_html($field_args['name']) . '</label></div><div class="cmb-td"><p>Error loading refresh button</p></div></div>';
+			}
+		},
+	) );
+
 
 	//$cmb_demo->add_field( array(
 	//	'name'       => __( 'Test Text', 'cmb2' ),
@@ -303,7 +342,7 @@ function resQwest_register_metabox() {
 	add_medium_text_field($cmb_demo, 'cancelPolicy');
 	add_medium_text_field($cmb_demo, 'restrictions');
 	add_medium_text_field($cmb_demo, 'bookingNotes');
-	add_medium_text_field($cmb_demo, 'location');
+	// Location field removed - causing display issues
 
 	// Debug Information Section
 	$cmb_demo->add_field( array(
@@ -433,45 +472,6 @@ function resQwest_register_metabox() {
 				error_log('resQwest lastError default_cb error: ' . $e->getMessage());
 			}
 			return 'No errors';
-		},
-	) );
-
-	// Refresh Button
-	$cmb_demo->add_field( array(
-		'name' => __( 'Actions', 'cmb2' ),
-		'desc' => __( 'Refresh inventory data from API', 'cmb2' ),
-		'id'   => $prefix . 'refresh_button',
-		'type' => 'title',
-		'render_row_cb' => function($field_args, $field) {
-			try {
-				$post_id = isset($field->object_id) ? $field->object_id : (isset($_GET['post']) ? intval($_GET['post']) : 0);
-				if (!$post_id && function_exists('get_the_ID')) {
-					$post_id = get_the_ID();
-				}
-				if (!$post_id) {
-					global $post;
-					$post_id = isset($post->ID) ? $post->ID : 0;
-				}
-				if ($post_id) {
-					$nonce = wp_create_nonce('resqwest_refresh_' . $post_id);
-					?>
-					<div class="cmb-row cmb-type-title">
-						<div class="cmb-th">
-							<label><?php echo esc_html($field_args['name']); ?></label>
-						</div>
-						<div class="cmb-td">
-							<p class="cmb2-metabox-description"><?php echo esc_html($field_args['desc']); ?></p>
-							<button type="button" id="resqwest-refresh-btn" class="button button-secondary" data-post-id="<?php echo esc_attr($post_id); ?>" data-nonce="<?php echo esc_attr($nonce); ?>">Refresh Inventory Data</button>
-							<span id="resqwest-refresh-status" style="margin-left: 10px;"></span>
-						</div>
-					</div>
-					<?php
-				}
-			} catch (Exception $e) {
-				error_log('resQwest refresh_button render_row_cb error: ' . $e->getMessage());
-				// Output a simple fallback
-				echo '<div class="cmb-row cmb-type-title"><div class="cmb-th"><label>' . esc_html($field_args['name']) . '</label></div><div class="cmb-td"><p>Error loading refresh button</p></div></div>';
-			}
 		},
 	) );
 	} catch (Exception $e) {

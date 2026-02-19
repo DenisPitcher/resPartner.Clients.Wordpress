@@ -8,22 +8,24 @@
  * @license      GPL-2.0+
  * @link         https://cmb2.io
  *
- * Plugin Name:  CMB2
- * Plugin URI:   https://github.com/CMB2/CMB2
- * Description:  CMB2 will create metaboxes and forms with custom fields that will blow your mind.
- * Author:       CMB2 team
- * Author URI:   https://cmb2.io
+ * NOTE: CMB2 is included as a library within the resQwest plugin.
+ * This file should NOT be recognized as a standalone WordPress plugin.
+ * 
+ * Library Information (for reference):
+ * Name: CMB2
+ * URI: https://github.com/CMB2/CMB2
+ * Description: CMB2 will create metaboxes and forms with custom fields that will blow your mind.
+ * Author: CMB2 team
+ * Author URI: https://cmb2.io
  * Contributors: Justin Sternberg (@jtsternberg / dsgnwrks.pro)
  *               WebDevStudios (@webdevstudios / webdevstudios.com)
  *               Human Made (@humanmadeltd / hmn.md)
  *               Jared Atchison (@jaredatch / jaredatchison.com)
  *               Bill Erickson (@billerickson / billerickson.net)
  *               Andrew Norcross (@norcross / andrewnorcross.com)
- *
- * Version:      2.11.0
- *
- * Text Domain:  cmb2
- * Domain Path:  languages
+ * Version: 2.11.0
+ * Text Domain: cmb2
+ * Domain Path: languages
  *
  *
  * Released under the GPL license
@@ -52,6 +54,18 @@
  *               or things might explode!
  * ***********************************************************************
  */
+
+// Prevent CMB2 from being activated as a plugin when included as a library
+// If this file is being loaded from within another plugin's directory, mark it as a library
+if ( defined( 'ABSPATH' ) && defined( 'WP_PLUGIN_DIR' ) ) {
+	// If CMB2 is not directly in wp-content/plugins/cmb2/, it's being used as a library
+	if ( strpos( __FILE__, WP_PLUGIN_DIR . DIRECTORY_SEPARATOR . 'cmb2' . DIRECTORY_SEPARATOR ) === false ) {
+		// Mark CMB2 as loaded as a library
+		if ( ! defined( 'CMB2_LOADED_AS_LIBRARY' ) ) {
+			define( 'CMB2_LOADED_AS_LIBRARY', true );
+		}
+	}
+}
 
 if ( ! class_exists( 'CMB2_Bootstrap_2110', false ) ) {
 
