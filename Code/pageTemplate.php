@@ -47,6 +47,13 @@ class pageTemplate {
 	 */
 	protected $templates;
 
+	/**
+	 * The locale/domain for this plugin.
+	 *
+	 * @var      string
+	 */
+	protected $plugin_locale;
+
 
 	/**
 	 * Returns an instance of this class. An implementation of the singleton design pattern.

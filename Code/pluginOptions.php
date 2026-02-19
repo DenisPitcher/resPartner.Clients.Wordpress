@@ -66,6 +66,72 @@ class resQwest_Admin {
 		add_action( 'admin_init', array( $this, 'init' ) );
 		add_action( 'admin_menu', array( $this, 'add_options_page' ) );
 		add_action( 'cmb2_admin_init', array( $this, 'add_options_page_metabox' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_refresh_scripts' ) );
+	}
+
+	/**
+	 * Enqueue scripts for refresh functionality
+	 * @since 0.1.0
+	 */
+	public function enqueue_refresh_scripts($hook) {
+		// Only load on our options page
+		if ($hook !== $this->options_page) {
+			return;
+		}
+		
+		wp_enqueue_script('jquery');
+		wp_add_inline_script('jquery', '
+			jQuery(document).ready(function($) {
+				$("#resqwest-refresh-all-btn").on("click", function() {
+					var $btn = $(this);
+					var $status = $("#resqwest-refresh-all-status");
+					var $progress = $("#resqwest-refresh-all-progress");
+					var nonce = $btn.data("nonce");
+					
+					// Disable button and show loading
+					$btn.prop("disabled", true);
+					$status.html("<span style=\"color: #0073aa;\">Refreshing all inventory...</span>");
+					$progress.html("<p>Starting refresh...</p>");
+					
+					$.ajax({
+						url: ajaxurl,
+						type: "POST",
+						data: {
+							action: "resqwest_refresh_all",
+							nonce: nonce
+						},
+						success: function(response) {
+							if (response.success) {
+								var message = response.data.message || "Refresh completed";
+								var pagesUpdated = response.data.pages_updated || 0;
+								var errors = response.data.errors || [];
+								
+								$status.html("<span style=\"color: #46b450;\">✓ " + message + "</span>");
+								var progressHtml = "<p><strong>Pages updated: " + pagesUpdated + "</strong></p>";
+								if (errors.length > 0) {
+									progressHtml += "<p style=\"color: #dc3232;\"><strong>Errors:</strong></p><ul>";
+									errors.forEach(function(error) {
+										progressHtml += "<li>" + error + "</li>";
+									});
+									progressHtml += "</ul>";
+								}
+								$progress.html(progressHtml);
+								$btn.prop("disabled", false);
+							} else {
+								$status.html("<span style=\"color: #dc3232;\">✗ " + (response.data.message || "Error refreshing") + "</span>");
+								$progress.html("<p style=\"color: #dc3232;\">" + (response.data.message || "An error occurred") + "</p>");
+								$btn.prop("disabled", false);
+							}
+						},
+						error: function() {
+							$status.html("<span style=\"color: #dc3232;\">✗ Network error occurred</span>");
+							$progress.html("<p style=\"color: #dc3232;\">Network error occurred</p>");
+							$btn.prop("disabled", false);
+						}
+					});
+				});
+			});
+		');
 	}
 
 
@@ -83,9 +149,110 @@ class resQwest_Admin {
 	 */
 	public function add_options_page() {
 		$this->options_page = add_menu_page( $this->title, $this->title, 'manage_options', $this->key, array( $this, 'admin_page_display' ) );
+		
+		// Add error log submenu
+		add_submenu_page( $this->key, 'Error Log', 'Error Log', 'manage_options', 'resqwest-error-log', array( $this, 'error_log_page_display' ) );
 
 		// Include CMB CSS in the head to avoid FOUC
 		add_action( "admin_print_styles-{$this->options_page}", array( 'CMB2_hookup', 'enqueue_cmb_css' ) );
+	}
+	
+	/**
+	 * Display error log page
+	 * @since 0.1.0
+	 */
+	public function error_log_page_display() {
+		$debug_log_path = WP_CONTENT_DIR . '/debug.log';
+		$log_exists = file_exists($debug_log_path);
+		$log_content = '';
+		$log_size = 0;
+		$max_lines = 500; // Show last 500 lines
+		
+		if ($log_exists) {
+			$log_size = filesize($debug_log_path);
+			$log_size_mb = round($log_size / 1024 / 1024, 2);
+			
+			// Read last N lines of the log file
+			if ($log_size > 0) {
+				$lines = file($debug_log_path);
+				if ($lines !== false) {
+					$total_lines = count($lines);
+					$start_line = max(0, $total_lines - $max_lines);
+					$log_content = implode('', array_slice($lines, $start_line));
+					
+					if ($total_lines > $max_lines) {
+						$log_content = "<!-- Showing last {$max_lines} of {$total_lines} lines -->\n" . $log_content;
+					}
+				}
+			}
+		}
+		
+		// Check for resQwest-specific errors
+		$resqwest_errors = array();
+		if ($log_content) {
+			$all_lines = explode("\n", $log_content);
+			foreach ($all_lines as $line) {
+				if (stripos($line, 'resQwest') !== false || stripos($line, 'resqwest') !== false) {
+					$resqwest_errors[] = $line;
+				}
+			}
+		}
+		?>
+		<div class="wrap">
+			<h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+			
+			<div class="notice notice-info">
+				<p><strong>Debug Log Location:</strong> <code><?php echo esc_html($debug_log_path); ?></code></p>
+				<?php if ($log_exists): ?>
+					<p><strong>File Size:</strong> <?php echo esc_html($log_size_mb); ?> MB</p>
+				<?php else: ?>
+					<p><strong>Status:</strong> Debug log file not found. Enable WP_DEBUG_LOG in wp-config.php to create it.</p>
+				<?php endif; ?>
+			</div>
+			
+			<?php if (!empty($resqwest_errors)): ?>
+			<div class="notice notice-warning">
+				<h2>resQwest-Related Errors (<?php echo count($resqwest_errors); ?>)</h2>
+				<div style="background: #fff; border: 1px solid #ccc; padding: 10px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px;">
+					<?php foreach ($resqwest_errors as $error): ?>
+						<div style="margin-bottom: 5px; color: #dc3232;"><?php echo esc_html($error); ?></div>
+					<?php endforeach; ?>
+				</div>
+			</div>
+			<?php endif; ?>
+			
+			<h2>Full Debug Log</h2>
+			<?php if ($log_exists && $log_content): ?>
+				<div style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 4px; max-height: 600px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.5;">
+					<pre style="margin: 0; white-space: pre-wrap; word-wrap: break-word;"><?php echo esc_html($log_content); ?></pre>
+				</div>
+				<p>
+					<button type="button" class="button" onclick="location.reload();">Refresh</button>
+					<?php if (current_user_can('manage_options')): ?>
+						<button type="button" class="button button-secondary" onclick="if(confirm('Clear the debug log? This cannot be undone.')) { window.location.href='?page=resqwest-error-log&action=clear_log&_wpnonce=<?php echo wp_create_nonce('clear_debug_log'); ?>'; }">Clear Log</button>
+					<?php endif; ?>
+				</p>
+			<?php elseif ($log_exists && $log_size == 0): ?>
+				<p>Debug log file exists but is empty.</p>
+			<?php else: ?>
+				<p>No debug log file found. To enable logging, add these lines to your wp-config.php:</p>
+				<pre style="background: #f0f0f0; padding: 10px; border: 1px solid #ccc;">define('WP_DEBUG', true);
+define('WP_DEBUG_LOG', true);
+define('WP_DEBUG_DISPLAY', false);</pre>
+			<?php endif; ?>
+		</div>
+		<?php
+		
+		// Handle log clearing
+		if (isset($_GET['action']) && $_GET['action'] === 'clear_log' && isset($_GET['_wpnonce'])) {
+			if (wp_verify_nonce($_GET['_wpnonce'], 'clear_debug_log') && current_user_can('manage_options')) {
+				if ($log_exists && is_writable($debug_log_path)) {
+					file_put_contents($debug_log_path, '');
+					echo '<div class="notice notice-success"><p>Debug log cleared successfully.</p></div>';
+					echo '<script>setTimeout(function(){location.href="?page=resqwest-error-log";}, 1000);</script>';
+				}
+			}
+		}
 	}
 
 	/**
@@ -155,12 +322,17 @@ class resQwest_Admin {
         //     'type' => 'checkbox'
 		// ) );
 		
+		// Refresh All Inventory Button
 		$cmb->add_field( array(
-            'name' => 'Force an update of resQwest Pages',
-            'desc' => 'trigger pages and their metadata to be reloaded from resQwest',
-            'id'   => 'resQwest_forceUpdate',
-            'type' => 'checkbox'
-        ) );
+			'name' => __( 'Refresh All Inventory', 'resQwest' ),
+			'desc' => __( 'Refresh all inventory pages from resQwest API', 'resQwest' ),
+			'id'   => 'resQwest_refresh_all',
+			'type' => 'title',
+			'after_field' => function($args, $field) {
+				$nonce = wp_create_nonce('resqwest_refresh_all');
+				return '<button type="button" id="resqwest-refresh-all-btn" class="button button-primary" data-nonce="' . esc_attr($nonce) . '">Refresh All Inventory</button><span id="resqwest-refresh-all-status" style="margin-left: 10px;"></span><div id="resqwest-refresh-all-progress" style="margin-top: 10px;"></div>';
+			},
+		) );
         
 	}
 
@@ -217,8 +389,46 @@ function resQwest_get_option( $key = '' ) {
 	return cmb2_get_option( resQwest_admin()->key, $key );
 }
 
-function resQwest_update_option( $key = '', $value, $single = true ) {
+function resQwest_update_option( $key, $value, $single = true ) {
 	return cmb2_update_option( resQwest_admin()->key, $key, $value, $single );
+}
+
+// AJAX handler for global refresh
+add_action( 'wp_ajax_resqwest_refresh_all', 'resQwest_ajax_refresh_all' );
+
+function resQwest_ajax_refresh_all() {
+	// Check user permissions
+	if (!current_user_can('manage_options')) {
+		wp_send_json_error(array('message' => 'Insufficient permissions'));
+		return;
+	}
+
+	// Verify nonce for security
+	if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'resqwest_refresh_all')) {
+		wp_send_json_error(array('message' => 'Security check failed'));
+		return;
+	}
+
+	// Refresh all inventory
+	$result = resQwest_loadInventory();
+	
+	if ($result === true) {
+		// Count updated pages
+		$inventoryPages = resQwest_get_post_ids_by_meta_key('resQwest-inventoryId');
+		$pagesUpdated = count($inventoryPages);
+		
+		wp_send_json_success(array(
+			'message' => 'All inventory refreshed successfully',
+			'pages_updated' => $pagesUpdated,
+			'errors' => array()
+		));
+	} else {
+		wp_send_json_error(array(
+			'message' => 'Failed to refresh inventory',
+			'pages_updated' => 0,
+			'errors' => array('Unable to load inventory from API')
+		));
+	}
 }
 
 // Get it started

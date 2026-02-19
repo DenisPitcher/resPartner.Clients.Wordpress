@@ -24,11 +24,14 @@ function resQwest_loadSecurityToken() {
                 return;
             }
             
+            // Suppress deprecation warnings from Httpful library (PHP 8.2+ compatibility)
+            $old_error_reporting = error_reporting(E_ALL & ~E_DEPRECATED);
             $response = \Httpful\Request::post($uri)
                 ->sendsJson()
                 ->body("{ username: '" . $apiId . "', password: '" . $apiKey . "'}")
                 ->addHeader('Origin', 'https://' . $_SERVER["HTTP_HOST"])
                 ->send();
+            error_reporting($old_error_reporting);
     
             $accessDetails = json_decode($response);
 
